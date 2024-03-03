@@ -18,10 +18,15 @@ from llama_index.core.agent import ReActAgent
 from llama_index.llms.huggingface import HuggingFaceLLM
 import os
 
-os.environ["OPENAI_API_KEY"]= "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"
+os.environ["OPENAI_API_KEY"]= "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"
+data = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    connections.connect(
+        uri="https://in03-d25b1342170ffed.api.gcp-us-west1.zillizcloud.com/",
+        token="6d9471b699afe11d8cd92a79c0bd431edda1f6a6fac849dae4415014d0b22e54ff4ab16c7d829cabe6c93ec85d39987f70e30799"
+        )
     index_loaded=False
     if not index_loaded:
         # load data
@@ -52,7 +57,7 @@ async def lifespan(app: FastAPI):
     llm = HuggingFaceLLM(
         context_window=2048,
         max_new_tokens=256,
-        generate_kwargs={"temperature": 0.25, "do_sample": False},
+        generate_kwargs={"temperature": 0.25, "do_sample": True},
         # query_wrapper_prompt=query_wrapper_prompt,
         tokenizer_name="llmware/bling-sheared-llama-2.7b-0.1",
         model_name="llmware/bling-sheared-llama-2.7b-0.1",
@@ -61,6 +66,7 @@ async def lifespan(app: FastAPI):
         # uncomment this if using CUDA to reduce memory usage
         # model_kwargs={"torch_dtype": torch.float16}
         )
+    print("i am in startup")
     
     agent = ReActAgent.from_tools(
         query_engine_tool,
@@ -68,9 +74,11 @@ async def lifespan(app: FastAPI):
         verbose=True,
         # context=context
     )
+    data["llm"]=agent
+    print("i am after agent")
 
-    response = agent.chat("What sports event can we go to?")
-    print(str(response))
+    # response = agent.chat("What sports event can we go to?")
+    # print(str(response))
 
 
 
@@ -79,6 +87,7 @@ async def lifespan(app: FastAPI):
     
     
     yield
+    print("Shutdown")
     #Clean up the ML models and release the resources
 
 
@@ -149,6 +158,13 @@ def read_root():
     return {"Hello": "World"}
 
 
-@app.get("/items/{item_id}")
+@app.post("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
+
+@app.post("/plandate/{date_id}")
+def read_item(item_id: int, q: Union[str, None] = None):
+    response = data["llm"].chat("What sports event can we go to?")
+    print(str(response))
+    return response
+    #return {"item_id": item_id, "q": q}
